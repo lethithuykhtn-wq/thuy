@@ -1,29 +1,645 @@
 <!DOCTYPE html>
 <html lang="vi">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Nội dung nhúng</title>
-  <style>
-    html, body { height:100%; margin:0; }
-    body { font-family: system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif; }
-    #container { height:100vh; display:flex; flex-direction:column; }
-    header { padding:8px 12px; background:#f7f7f8; border-bottom:1px solid #e5e7eb; }
-    header h1 { font-size:16px; margin:0; font-weight:600; }
-    .frame-wrap { flex:1; min-height:0; }
-    iframe { width:100%; height:100%; border:0; display:block; }
-    noscript { display:block; padding:12px; color:#b91c1c; }
-  </style>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Trò chơi: Siêu Sao Máy Tính</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/tone/14.7.77/Tone.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Baloo 2', cursive;
+            touch-action: none;
+        }
+        .draggable-item {
+            touch-action: none;
+        }
+        .drop-zone {
+            border: 2px dashed #a78bfa;
+            min-height: 60px;
+            transition: background-color 0.3s, border-color 0.3s;
+        }
+        .drop-zone.over {
+            background-color: #d8b4fe;
+            border-color: #8b5cf6;
+        }
+        .feedback-correct {
+            animation: correct-animation 0.5s ease-in-out;
+        }
+        .feedback-incorrect {
+            animation: incorrect-animation 0.5s ease-in-out;
+        }
+        @keyframes correct-animation {
+            0%, 100% { transform: scale(1); }
+            50% { transform: scale(1.1); }
+        }
+        @keyframes incorrect-animation {
+            0%, 100% { transform: translateX(0); }
+            25% { transform: translateX(-10px); }
+            75% { transform: translateX(10px); }
+        }
+        .confetti {
+            position: absolute;
+            width: 10px;
+            height: 10px;
+            background-color: #f00;
+            opacity: 0.7;
+            border-radius: 50%;
+            animation: fall 3s linear infinite;
+        }
+        @keyframes fall {
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+        .modal {
+            transition: opacity 0.3s ease;
+        }
+    </style>
 </head>
-<body>
-  <div id="container">
-    <header>
-      <h1>Nội dung</h1>
-    </header>
-    <div class="frame-wrap">
-      <iframe src="data/content.html" title="Nội dung"></iframe>
-      <noscript>Trình duyệt của bạn đang tắt JavaScript. Vui lòng bật để xem nội dung.</noscript>
+<body class="bg-gradient-to-br from-amber-200 via-violet-300 to-sky-300 min-h-screen flex items-center justify-center p-4">
+
+    <div id="game-container" class="w-full max-w-3xl mx-auto bg-white/90 backdrop-blur-sm rounded-3xl shadow-2xl p-6 md:p-8 text-center text-gray-800 relative overflow-hidden">
+        <div id="confetti-container"></div>
+        <!-- Màn hình bắt đầu -->
+        <div id="start-screen">
+            <h1 class="text-4xl md:text-6xl font-bold text-violet-600 mb-4 drop-shadow-lg">💻 Siêu Sao Máy Tính 🏆</h1>
+            <p class="text-lg md:text-xl mb-8">Cùng khám phá thế giới sao chép và di chuyển thư mục nhé!</p>
+            
+<div class="grid md:grid-cols-2 gap-3 mb-6">
+  <input id="studentName" placeholder="Họ và tên học sinh" class="w-full px-4 py-3 rounded-xl border border-violet-200 focus:outline-none focus:ring-2 focus:ring-violet-400" />
+  <input id="studentClass" placeholder="Lớp (vd: 4A1)" class="w-full px-4 py-3 rounded-xl border border-violet-200 focus:outline-none focus:ring-2 focus:ring-violet-400" />
+</div>
+<button id="start-button" class="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-4 px-10 rounded-full text-xl shadow-lg transform hover:scale-105 transition-transform duration-300">
+                Bắt đầu!
+            </button>
+        </div>
+
+        <!-- Màn hình hướng dẫn -->
+        <div id="instructions-screen" class="hidden">
+            <h2 class="text-3xl font-bold text-amber-500 mb-4">💡 Hướng dẫn 💡</h2>
+            <div class="text-left text-lg space-y-4 mx-auto max-w-lg">
+                <p>✔️ Với câu hỏi <strong>trắc nghiệm</strong>, hãy chọn đáp án mà bạn tin là đúng nhất.</p>
+                <p>✔️ Với câu hỏi <strong>kéo thả</strong>, hãy kéo các bước vào đúng ô thứ tự.</p>
+                <p>💡 Sau khi trả lời, bé có thể nhấn nút <strong>"Xem giải thích"</strong> để hiểu bài rõ hơn.</p>
+                <p>🎵 Lắng nghe âm thanh để biết câu trả lời của bạn đúng hay sai!</p>
+            </div>
+            <button id="play-button" class="mt-8 bg-gradient-to-r from-pink-500 to-yellow-500 hover:from-pink-600 hover:to-yellow-600 text-white font-bold py-4 px-10 rounded-full text-xl shadow-lg transform hover:scale-105 transition-transform duration-300">
+                Vào chơi thôi!
+            </button>
+        </div>
+
+        <!-- Màn hình trò chơi -->
+        <div id="game-screen" class="hidden">
+            <div class="flex justify-between items-center mb-4">
+                <div id="progress-text" class="text-lg font-semibold bg-white/50 rounded-full px-4 py-1">Câu 1/8</div>
+                <div id="score-text" class="text-lg font-semibold bg-white/50 rounded-full px-4 py-1">Điểm: 0</div>
+            </div>
+            <div id="question-container" class="bg-violet-50 p-6 rounded-2xl shadow-inner">
+                <h2 id="question-text" class="text-xl md:text-2xl font-bold mb-6 min-h-[80px]"></h2>
+                <div id="answer-options" class="space-y-4"></div>
+                <div id="drag-drop-container" class="hidden mt-4 md:flex md:space-x-4">
+                    <div id="draggable-items" class="w-1/2 space-y-3 p-2 bg-gray-100 rounded-lg"></div>
+                    <div id="drop-zones" class="w-1/2 space-y-3"></div>
+                </div>
+                 <div id="drag-drop-container-mobile" class="hidden mt-4 md:hidden">
+                    <p class="mb-2 font-semibold">Kéo các bước vào đúng thứ tự:</p>
+                    <div id="drop-zones-mobile" class="space-y-3 mb-4"></div>
+                    <p class="mb-2 font-semibold">Các bước:</p>
+                    <div id="draggable-items-mobile" class="space-y-3 p-2 bg-gray-100 rounded-lg"></div>
+                </div>
+            </div>
+            <div id="navigation-buttons" class="mt-6 flex justify-center items-center gap-4 h-12">
+                 <button id="check-drag-button" class="hidden bg-amber-500 hover:bg-amber-600 text-white font-bold py-2 px-6 rounded-full text-lg shadow-lg">Kiểm tra</button>
+                 <button id="explanation-button" class="hidden bg-sky-500 hover:bg-sky-600 text-white font-bold py-2 px-6 rounded-full text-lg shadow-lg">💡 Xem giải thích</button>
+                 <button id="next-question-button" class="hidden bg-green-500 hover:bg-green-600 text-white font-bold py-2 px-6 rounded-full text-lg shadow-lg">Câu tiếp theo ➡️</button>
+            </div>
+        </div>
+
+        <!-- Màn hình kết thúc -->
+        <div id="end-screen" class="hidden">
+            <h2 class="text-4xl font-bold text-green-500 mb-4 drop-shadow-md">🎉 Chúc Mừng! 🎉</h2>
+            <p class="text-2xl mb-2">Bé đã trở thành một Siêu Sao Máy Tính!</p>
+            <p class="text-2xl mb-2">Tổng điểm của bạn là:</p>
+            <p id="final-score" class="text-7xl font-bold text-violet-600 my-4 drop-shadow-lg">0</p>
+            <button id="restart-button" class="bg-gradient-to-r from-green-400 to-blue-500 hover:from-green-500 hover:to-blue-600 text-white font-bold py-4 px-10 rounded-full text-xl shadow-lg transform hover:scale-105 transition-transform duration-300">
+                Chơi lại
+            </button>
+        </div>
     </div>
-  </div>
+
+    <!-- Explanation Modal -->
+    <div id="explanation-modal" class="modal hidden fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center p-4 z-50">
+        <div class="bg-white rounded-2xl shadow-xl w-full max-w-lg p-6 relative">
+            <button id="close-explanation-modal" class="absolute top-4 right-4 text-gray-500 hover:text-gray-800 text-3xl">&times;</button>
+            <h3 class="text-2xl font-bold text-violet-600 mb-4">💡 Lời giải thích 💡</h3>
+            <div id="explanation-text" class="text-left text-lg max-h-[60vh] overflow-y-auto pr-2"></div>
+        </div>
+    </div>
+
+    <script>
+        // --- Game Configuration ---
+// === Added: Submission config & state tracking ===
+const WEBAPP_URL = 'https://script.google.com/macros/s/AKfycbyxhCt7tG2mbUO8i3LrELCbeJszEAyYSAwo1CpRuayEaxJ9f5dmZ84JkVg4PLNUcSmg/exec';
+const SHARED_SECRET = '1234567891011121314151617181920';
+
+// Trạng thái theo dõi bài làm
+const state = { answers: {}, correctCount: 0, startedAt: null };
+
+// Gắn _id cho câu hỏi nếu chưa có
+function ensureQuestionIds() {
+  questions.forEach((q, i) => { if (!q._id) q._id = `q${i+1}`; });
+}
+
+// Gửi kết quả về Apps Script
+async function sendResultToSheet(payload) {
+  try {
+    await fetch(WEBAPP_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    console.log('Submitted to WebApp');
+  } catch (e) {
+    console.warn('Submit failed (network/CORS):', e);
+  }
+}
+
+// Gọi sau khi hiện màn hình kết thúc
+function submitResultsAtEnd() {
+  const durationSec = Math.round((Date.now() - state.startedAt)/1000);
+  const details = Object.entries(state.answers).map(([id, v]) => ({ id, ...v }));
+  const payload = {
+    token: SHARED_SECRET,
+    name: document.getElementById('studentName')?.value || 'Chưa nhập',
+    className: document.getElementById('studentClass')?.value || '',
+    quizTitle: document.title,
+    topic: 'Sao chép & di chuyển thư mục',
+    totalQ: questions.length,
+    correct: state.correctCount,
+    percent: Math.round((state.correctCount / questions.length) * 100),
+    seconds: durationSec,
+    details
+  };
+  sendResultToSheet(payload);
+}
+
+        const questions = [
+            // --- TRẮC NGHIỆM ---
+            {
+                type: 'mcq',
+                question: '💖 Để sao chép một thư mục, sau khi chọn thư mục đó, bạn cần nhấn vào lệnh nào?',
+                options: ['✂️ Cut', '📋 Copy', '🗑️ Delete', '📝 Rename'],
+                answer: 1,
+                explanation: 'Sau khi chọn thư mục cần sao chép, bước tiếp theo là nhấn chuột vào nút lệnh <strong>Copy</strong> (hoặc tổ hợp phím <strong>Ctrl + C</strong>). Lệnh này sẽ tạo ra một bản sao trong bộ nhớ của máy tính, sẵn sàng để dán ra ở nơi khác.'
+            },
+            {
+                type: 'mcq',
+                question: '⭐ Sau khi sao chép một tệp tin, để dán tệp tin đó vào thư mục mới, bạn sẽ sử dụng tổ hợp phím tắt nào?',
+                options: ['⌨️ Ctrl + X', '⌨️ Ctrl + C', '⌨️ Ctrl + A', '⌨️ Ctrl + V'],
+                answer: 3,
+                explanation: 'Để dán đối tượng đã được sao chép vào thư mục đích, chúng ta cần nhấn chuột vào nút lệnh <strong>Paste</strong> hoặc sử dụng tổ hợp phím <strong>Ctrl + V</strong>. Giống như dùng hồ dán để dán một hình ảnh vào vở vậy đó bé!'
+            },
+            {
+                type: 'mcq',
+                question: 'Để "chuyển nhà" cho một thư mục (di chuyển), sau khi chọn thư mục đó, bé sẽ sử dụng tổ hợp phím tắt nào sau đây? 🚀',
+                options: ['Ctrl + C', 'Ctrl + X', 'Ctrl + V', 'Ctrl + A'],
+                answer: 1,
+                explanation: 'Lệnh <strong>Cut</strong> với tổ hợp phím <strong>Ctrl + X</strong> được dùng để cắt một thư mục hoặc tệp khỏi vị trí hiện tại, chuẩn bị cho việc di chuyển nó đến một nơi mới. Nó giống như mình bưng một món đồ đi chỗ khác vậy, món đồ sẽ không còn ở chỗ cũ nữa.'
+            },
+            {
+                type: 'mcq',
+                question: 'Sau khi bạn An thực hiện thành công thao tác di chuyển thư mục Truyen từ thư mục Lop 4A sang thư mục Luu tru, điều gì sẽ xảy ra với thư mục Truyen ở trong thư mục Lop 4A? 🤔',
+                options: ['Thư mục vẫn còn ở thư mục Lop 4A.', 'Thư mục được nhân đôi ở cả hai nơi.', 'Thư mục biến mất khỏi thư mục Lop 4A.', 'Thư mục bị xóa vĩnh viễn.'],
+                answer: 2,
+                explanation: 'Khi di chuyển (Cut và Paste), thư mục gốc sẽ không còn tồn tại ở vị trí cũ nữa mà chỉ xuất hiện ở thư mục đích thôi nhé! Nó đã "chuyển nhà" thật sự rồi đó.'
+            },
+            // --- KÉO THẢ ---
+            {
+                type: 'drag_drop',
+                question: 'Hãy sắp xếp các bước sau đây theo đúng thứ tự để sao chép thư mục "Tin hoc" từ thư mục "Lop 4A" sang thư mục "Luu tru" nhé!',
+                items: [
+                    { id: 'c3_a', text: 'Mở thư mục đích "Luu tru".', style: 'background-color:#FFF8E1; border-left: 5px solid #FFC107;' },
+                    { id: 'c3_b', text: 'Chọn thư mục "Tin hoc" cần sao chép.', style: 'background-color:#E3F2FD; border-left: 5px solid #2196F3;' },
+                    { id: 'c3_c', text: 'Mở thư mục nguồn "Lop 4A".', style: 'background-color:#E8F5E9; border-left: 5px solid #4CAF50;' },
+                    { id: 'c3_d', text: 'Nhấn lệnh Paste (hoặc Ctrl + V).', style: 'background-color:#FCE4EC; border-left: 5px solid #E91E63;' }
+                ],
+                correctOrder: ['c3_c', 'c3_b', 'c3_a', 'c3_d'],
+                explanation: 'Quy trình đúng là: <strong>1. Mở thư mục nguồn "Lop 4A"</strong> (đến nơi chứa đồ) → <strong>2. Chọn thư mục "Tin hoc"</strong> (chọn món đồ) → <strong>3. Mở thư mục đích "Luu tru"</strong> (đi đến nơi muốn cất) → <strong>4. Nhấn lệnh Paste</strong> (đặt món đồ vào).'
+            },
+            {
+                type: 'drag_drop_fill',
+                question: 'Hãy kéo các lệnh và phím tắt vào đúng quy trình 4 bước để hoàn thành việc sao chép.',
+                base: [
+                    { text: 'Bước 1: Mở thư mục nguồn và chọn thư mục cần chép.' },
+                    { text: 'Bước 2:', drop: true, correctId: 'c4_copy' },
+                    { text: 'Bước 3: Mở thư mục đích.' },
+                    { text: 'Bước 4:', drop: true, correctId: 'c4_paste' }
+                ],
+                items: [
+                    { id: 'c4_paste', text: 'Nhấn chuột vào nút lệnh Paste (hoặc gõ tổ hợp phím Ctrl + V).', style: 'background-color:#E0F7FA; border-left: 5px solid #00BCD4;' },
+                    { id: 'c4_copy', text: 'Nhấn chuột vào nút lệnh Copy (hoặc gõ tổ hợp phím Ctrl + C).', style: 'background-color:#F3E5F5; border-left: 5px solid #9C27B0;' }
+                ],
+                explanation: 'Sau khi chọn thư mục (Bước 1), chúng ta phải dùng lệnh <strong>Copy (Ctrl + C)</strong> để sao chép nó (Bước 2). Sau đó, khi đã ở thư mục đích (Bước 3), chúng ta dùng lệnh <strong>Paste (Ctrl + V)</strong> để dán nó ra (Bước 4).'
+            },
+            {
+                type: 'drag_drop',
+                question: '🌟 Bé hãy thật khéo léo kéo thả các bước dưới đây để sắp xếp đúng thứ tự 4 bước chính để di chuyển thư mục "Truyen" nhé!',
+                items: [
+                    { id: 'c7_a', text: 'Mở thư mục Luu tru (thư mục đích).', style: 'background-color:#FFF8E1; border-left: 5px solid #FFC107;' },
+                    { id: 'c7_b', text: 'Chọn thư mục Truyen và nháy vào nút lệnh Cut (hoặc nhấn Ctrl + X).', style: 'background-color:#E3F2FD; border-left: 5px solid #2196F3;' },
+                    { id: 'c7_c', text: 'Nháy vào nút lệnh Paste (hoặc nhấn Ctrl + V) để dán thư mục vào.', style: 'background-color:#FCE4EC; border-left: 5px solid #E91E63;' },
+                    { id: 'c7_d', text: 'Mở thư mục Lop 4A (thư mục nguồn).', style: 'background-color:#E8F5E9; border-left: 5px solid #4CAF50;' }
+                ],
+                correctOrder: ['c7_d', 'c7_b', 'c7_a', 'c7_c'],
+                explanation: 'Để "chuyển nhà" cho thư mục, bé cần: <strong>1. Mở thư mục nguồn "Lop 4A"</strong> (đến nhà cũ) → <strong>2. Chọn thư mục "Truyen" và Cut</strong> (đóng gói đồ đạc) → <strong>3. Mở thư mục đích "Luu tru"</strong> (đi đến nhà mới) → <strong>4. Nhấn lệnh Paste</strong> (dọn đồ vào nhà mới).'
+            },
+             {
+                type: 'drag_drop',
+                question: '🏡 Thử tài trí nhớ của bé nào! Hãy sắp xếp lại quy trình "dọn nhà" cho một tệp tin từ thư mục này sang thư mục khác.',
+                items: [
+                    { id: 'c8_a', text: 'Đi đến "ngôi nhà mới" (thư mục đích).', style: 'background-color:#FFF3E0; border-left: 5px solid #FF9800;' },
+                    { id: 'c8_b', text: 'Chọn tệp tin muốn di chuyển và dùng lệnh Cut.', style: 'background-color:#F3E5F5; border-left: 5px solid #9C27B0;' },
+                    { id: 'c8_c', text: 'Dán tệp tin vào nhà mới bằng lệnh Paste.', style: 'background-color:#E0F7FA; border-left: 5px solid #00BCD4;' },
+                    { id: 'c8_d', text: 'Mở "ngôi nhà cũ" (thư mục nguồn).', style: 'background-color:#F1F8E9; border-left: 5px solid #8BC34A;' }
+                ],
+                correctOrder: ['c8_d', 'c8_b', 'c8_a', 'c8_c'],
+                explanation: 'Quy trình "dọn nhà" cho tệp tin rất đơn giản: <strong>1. Mở "nhà cũ"</strong> → <strong>2. Dùng lệnh Cut để "bưng" tệp tin đi</strong> → <strong>3. Đi đến "nhà mới"</strong> → <strong>4. Dùng lệnh Paste để "đặt" tệp tin vào.</strong>'
+            }
+        ];
+
+        // --- Game Variables ---
+        let currentQuestionIndex = 0;
+        let score = 0;
+        let synth;
+
+        // --- DOM Elements ---
+        const allScreens = {
+            start: document.getElementById('start-screen'),
+            instructions: document.getElementById('instructions-screen'),
+            game: document.getElementById('game-screen'),
+            end: document.getElementById('end-screen')
+        };
+        const startButton = document.getElementById('start-button');
+        const playButton = document.getElementById('play-button');
+        const restartButton = document.getElementById('restart-button');
+        const progressText = document.getElementById('progress-text');
+        const scoreText = document.getElementById('score-text');
+        const questionText = document.getElementById('question-text');
+        const answerOptions = document.getElementById('answer-options');
+        const finalScore = document.getElementById('final-score');
+        const dragDropContainer = document.getElementById('drag-drop-container');
+        const draggableItemsContainer = document.getElementById('draggable-items');
+        const dropZonesContainer = document.getElementById('drop-zones');
+        const checkDragButton = document.getElementById('check-drag-button');
+        const dragDropContainerMobile = document.getElementById('drag-drop-container-mobile');
+        const draggableItemsContainerMobile = document.getElementById('draggable-items-mobile');
+        const dropZonesContainerMobile = document.getElementById('drop-zones-mobile');
+        const confettiContainer = document.getElementById('confetti-container');
+        const explanationButton = document.getElementById('explanation-button');
+        const nextQuestionButton = document.getElementById('next-question-button');
+        const explanationModal = document.getElementById('explanation-modal');
+        const closeExplanationModal = document.getElementById('close-explanation-modal');
+        const explanationText = document.getElementById('explanation-text');
+
+        // --- Audio Handling ---
+        function setupAudio() {
+            if (!synth) {
+                synth = new Tone.Synth().toDestination();
+            }
+        }
+
+        function playSound(isCorrect) {
+            if (!synth) return;
+            Tone.start();
+            if (isCorrect) {
+                synth.triggerAttackRelease("C5", "8n", Tone.now());
+                synth.triggerAttackRelease("G5", "8n", Tone.now() + 0.1);
+            } else {
+                synth.triggerAttackRelease("A2", "8n");
+            }
+        }
+        
+        // --- Screen Management ---
+        function showScreen(screenName) {
+            Object.values(allScreens).forEach(screen => screen.classList.add('hidden'));
+            allScreens[screenName].classList.remove('hidden');
+        }
+
+        // --- Game Logic ---
+        function startGame() {
+            ensureQuestionIds();
+            showScreen('game');
+            currentQuestionIndex = 0;
+            score = 0;
+            state.answers = {};
+            state.correctCount = 0;
+            state.startedAt = Date.now();
+            updateScore();
+            loadQuestion();
+        }
+
+        function loadQuestion() {
+            if (currentQuestionIndex >= questions.length) {
+                showEndScreen();
+                return;
+            }
+
+            progressText.textContent = `Câu ${currentQuestionIndex + 1}/${questions.length}`;
+            const currentQuestion = questions[currentQuestionIndex];
+            questionText.innerHTML = currentQuestion.question;
+
+            // Cleanup
+            answerOptions.innerHTML = '';
+            dragDropContainer.classList.add('hidden');
+            dragDropContainerMobile.classList.add('hidden');
+            checkDragButton.classList.add('hidden');
+            explanationButton.classList.add('hidden');
+            nextQuestionButton.classList.add('hidden');
+
+            if (currentQuestion.type === 'mcq') {
+                answerOptions.classList.remove('hidden');
+                currentQuestion.options.forEach((option, index) => {
+                    const button = document.createElement('button');
+                    button.innerHTML = option;
+                    button.classList.add('w-full', 'bg-white', 'p-4', 'rounded-xl', 'shadow-md', 'text-left', 'hover:bg-violet-100', 'transition-colors', 'duration-200', 'border-2', 'border-transparent', 'text-lg');
+                    button.onclick = () => selectAnswer(index, button);
+                    answerOptions.appendChild(button);
+                });
+            } else if (currentQuestion.type === 'drag_drop' || currentQuestion.type === 'drag_drop_fill') {
+                answerOptions.classList.add('hidden');
+                setupDragDrop(currentQuestion);
+            }
+        }
+        
+        function showPostAnswerButtons() {
+            explanationButton.classList.remove('hidden');
+            nextQuestionButton.classList.remove('hidden');
+        }
+
+        function selectAnswer(selectedIndex, button) {
+            const isCorrect = selectedIndex === questions[currentQuestionIndex].answer;
+            const qid = questions[currentQuestionIndex]._id || `q${currentQuestionIndex+1}`;
+            state.answers[qid] = { type: 'mcq', chosen: selectedIndex, correct: isCorrect };
+            Array.from(answerOptions.children).forEach(btn => btn.disabled = true);
+
+            if (isCorrect) {
+                state.correctCount++;
+                score += 10;
+                playSound(true);
+                button.classList.add('bg-green-400', 'text-white', 'border-green-600', 'feedback-correct');
+            } else {
+                playSound(false);
+                button.classList.add('bg-red-400', 'text-white', 'border-red-600', 'feedback-incorrect');
+                const correctButton = answerOptions.children[questions[currentQuestionIndex].answer];
+                correctButton.classList.add('bg-green-400', 'text-white', 'border-green-600');
+            }
+            updateScore();
+            showPostAnswerButtons();
+        }
+
+        // --- Drag and Drop Logic ---
+        let draggedItem = null;
+        let clone = null;
+
+        function setupDragDrop(question) {
+            if (question.type === 'drag_drop_fill') {
+                setupDragDropFillForView(question, draggableItemsContainer, dropZonesContainer, dragDropContainer);
+                setupDragDropFillForView(question, draggableItemsContainerMobile, dropZonesContainerMobile, dragDropContainerMobile);
+            } else {
+                setupDragDropForView(question, draggableItemsContainer, dropZonesContainer, dragDropContainer);
+                setupDragDropForView(question, draggableItemsContainerMobile, dropZonesContainerMobile, dragDropContainerMobile);
+            }
+            checkDragButton.classList.remove('hidden');
+        }
+
+        function createDraggableItem(item) {
+            const div = document.createElement('div');
+            div.id = item.id;
+            div.innerHTML = item.text;
+            div.draggable = true;
+            div.style.cssText = item.style;
+            div.classList.add('p-3', 'rounded-lg', 'shadow', 'cursor-move', 'draggable-item');
+            div.addEventListener('dragstart', handleDragStart);
+            div.addEventListener('touchstart', handleTouchStart, { passive: false });
+            div.addEventListener('touchmove', handleTouchMove, { passive: false });
+            div.addEventListener('touchend', handleTouchEnd);
+            return div;
+        }
+
+        function createDropZone(index, placeholderText) {
+            const zone = document.createElement('div');
+            zone.classList.add('p-4', 'rounded-lg', 'drop-zone', 'flex', 'items-center', 'justify-center');
+            zone.dataset.order = index;
+            zone.innerHTML = `<span class="text-gray-400">${placeholderText}</span>`;
+            zone.addEventListener('dragover', handleDragOver);
+            zone.addEventListener('dragleave', handleDragLeave);
+            zone.addEventListener('drop', handleDrop);
+            return zone;
+        }
+
+        function setupDragDropForView(question, draggableContainer, dropZoneContainer, mainContainer) {
+            draggableContainer.innerHTML = '';
+            dropZoneContainer.innerHTML = '';
+            mainContainer.classList.remove('hidden');
+
+            const shuffledItems = [...question.items].sort(() => Math.random() - 0.5);
+            shuffledItems.forEach(item => {
+                draggableContainer.appendChild(createDraggableItem(item));
+            });
+
+            question.items.forEach((_, index) => {
+                dropZoneContainer.appendChild(createDropZone(index, `Thứ tự ${index + 1}`));
+            });
+        }
+        
+        function setupDragDropFillForView(question, draggableContainer, dropZoneContainer, mainContainer) {
+            draggableContainer.innerHTML = '';
+            dropZoneContainer.innerHTML = '';
+            mainContainer.classList.remove('hidden');
+
+            question.items.forEach(item => {
+                draggableContainer.appendChild(createDraggableItem(item));
+            });
+
+            question.base.forEach((step, index) => {
+                const container = document.createElement('div');
+                container.classList.add('text-left', 'p-3', 'bg-gray-100', 'rounded-lg');
+                container.textContent = step.text;
+                if (step.drop) {
+                    const zone = createDropZone(index, 'Kéo vào đây');
+                    zone.dataset.correctId = step.correctId;
+                    container.appendChild(zone);
+                }
+                dropZoneContainer.appendChild(container);
+            });
+        }
+
+        function handleDragStart(e) {
+            draggedItem = e.target;
+            e.dataTransfer.setData('text/plain', e.target.id);
+            setTimeout(() => e.target.classList.add('opacity-50'), 0);
+        }
+        
+        function handleDragOver(e) { e.preventDefault(); e.currentTarget.classList.add('over'); }
+        function handleDragLeave(e) { e.currentTarget.classList.remove('over'); }
+
+        function handleDrop(e) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('over');
+            const targetZone = e.currentTarget;
+
+            if (targetZone.firstChild && targetZone.firstChild.classList.contains('draggable-item')) {
+                const existingItem = targetZone.firstChild;
+                const draggableContainer = targetZone.closest('.md\\:flex, .md\\:hidden').querySelector('[id^="draggable-items"]');
+                draggableContainer.appendChild(existingItem);
+            }
+            
+            draggedItem.classList.remove('opacity-50');
+            targetZone.innerHTML = '';
+            targetZone.appendChild(draggedItem);
+            draggedItem = null;
+        }
+
+        function handleTouchStart(e) {
+            e.preventDefault();
+            draggedItem = e.target;
+            clone = draggedItem.cloneNode(true);
+            clone.style.position = 'absolute';
+            clone.style.zIndex = '1000';
+            clone.style.opacity = '0.7';
+            document.body.appendChild(clone);
+            moveClone(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchMove(e) {
+            e.preventDefault();
+            if (!draggedItem) return;
+            moveClone(e.touches[0].clientX, e.touches[0].clientY);
+        }
+
+        function handleTouchEnd(e) {
+            if (!draggedItem) return;
+            clone.style.display = 'none';
+            const dropTarget = document.elementFromPoint(e.changedTouches[0].clientX, e.changedTouches[0].clientY);
+            document.body.removeChild(clone);
+            clone = null;
+
+            if (dropTarget && dropTarget.classList.contains('drop-zone')) {
+                handleDrop({ preventDefault: () => {}, currentTarget: dropTarget });
+            }
+        }
+        
+        function moveClone(x, y) {
+             if (clone) {
+                clone.style.left = x - clone.offsetWidth / 2 + 'px';
+                clone.style.top = y - clone.offsetHeight / 2 + 'px';
+            }
+        }
+
+        function checkDragDropAnswer() {
+            const currentQuestion = questions[currentQuestionIndex];
+            checkDragButton.classList.add('hidden');
+            let isCorrect = false;
+
+            const isMobileView = window.getComputedStyle(dragDropContainerMobile).display !== 'none';
+            const relevantDropZonesContainer = isMobileView ? dropZonesContainerMobile : dropZonesContainer;
+            const zones = Array.from(relevantDropZonesContainer.querySelectorAll('.drop-zone'));
+
+            if (currentQuestion.type === 'drag_drop_fill') {
+                let correctCount = 0;
+                zones.forEach(zone => {
+                    const droppedItem = zone.children[0];
+                    if (droppedItem && droppedItem.classList.contains('draggable-item') && droppedItem.id === zone.dataset.correctId) {
+                        zone.classList.add('bg-green-200', 'border-green-400');
+                        correctCount++;
+                    } else {
+                        zone.classList.add('bg-red-200', 'border-red-400');
+                    }
+                });
+                isCorrect = correctCount === currentQuestion.items.length;
+            } else { // 'drag_drop'
+                const finalOrder = zones.map(zone => zone.children[0] && zone.children[0].classList.contains('draggable-item') ? zone.children[0].id : null);
+                isCorrect = JSON.stringify(finalOrder) === JSON.stringify(currentQuestion.correctOrder);
+                
+                zones.forEach((zone, index) => {
+                    const droppedItem = zone.children[0];
+                    if(droppedItem) {
+                       const droppedId = droppedItem.id;
+                       if (isCorrect || droppedId === currentQuestion.correctOrder[index]) {
+                           zone.classList.add('bg-green-200', 'border-green-400');
+                       } else {
+                           zone.classList.add('bg-red-200', 'border-red-400');
+                       }
+                    } else if (!isCorrect) {
+                        zone.classList.add('bg-red-200', 'border-red-400');
+                    }
+                });
+            }
+
+            if (isCorrect) {
+                score += 10;
+                playSound(true);
+            } else {
+                playSound(false);
+            }
+            updateScore();
+            showPostAnswerButtons();
+        }
+
+        function updateScore() {
+            scoreText.textContent = `Điểm: ${score}`;
+        }
+
+        function showEndScreen() {
+            showScreen('end');
+            finalScore.textContent = score;
+            launchConfetti();
+            // === Auto-submit results to Google Apps Script ===
+            submitResultsAtEnd();
+        }
+        
+        function launchConfetti() {
+            confettiContainer.innerHTML = '';
+            for (let i = 0; i < 100; i++) {
+                const confetti = document.createElement('div');
+                confetti.classList.add('confetti');
+                confetti.style.left = Math.random() * 100 + 'vw';
+                confetti.style.animationDuration = Math.random() * 2 + 3 + 's';
+                confetti.style.backgroundColor = `hsl(${Math.random() * 360}, 100%, 50%)`;
+                confetti.style.transform = `scale(${Math.random() + 0.5})`;
+                confettiContainer.appendChild(confetti);
+            }
+        }
+
+        // --- Event Listeners ---
+        startButton.addEventListener('click', () => {
+            setupAudio();
+            showScreen('instructions');
+        });
+        playButton.addEventListener('click', startGame);
+        restartButton.addEventListener('click', () => {
+            confettiContainer.innerHTML = '';
+            showScreen('start');
+        });
+        checkDragButton.addEventListener('click', checkDragDropAnswer);
+        
+        explanationButton.addEventListener('click', () => {
+            explanationText.innerHTML = questions[currentQuestionIndex].explanation;
+            explanationModal.classList.remove('hidden');
+        });
+
+        closeExplanationModal.addEventListener('click', () => {
+            explanationModal.classList.add('hidden');
+        });
+
+        nextQuestionButton.addEventListener('click', () => {
+            currentQuestionIndex++;
+            loadQuestion();
+        });
+
+    </script>
 </body>
 </html>
